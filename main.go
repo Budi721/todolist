@@ -55,7 +55,7 @@ func run() error {
 	}
 
 	defer func() {
-		log.Println("stopping database support")
+		log.Println("Stopping database support")
 		sql, _ := db.DB()
 		_ = sql.Close()
 	}()
