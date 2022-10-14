@@ -2,20 +2,20 @@ package main
 
 import (
 	"fmt"
-	"github.com/Budi721/todolistskyshi/app/services"
-	"github.com/Budi721/todolistskyshi/business/data"
-	"github.com/Budi721/todolistskyshi/business/data/activity"
-	"github.com/Budi721/todolistskyshi/business/data/todo"
-	"github.com/Budi721/todolistskyshi/fondation/web"
-	"github.com/go-playground/validator/v10"
 	"log"
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 
+	"github.com/Budi721/todolistskyshi/app/services"
+	"github.com/Budi721/todolistskyshi/business/data"
+	"github.com/Budi721/todolistskyshi/business/data/activity"
+	"github.com/Budi721/todolistskyshi/business/data/todo"
 	"github.com/Budi721/todolistskyshi/business/sys/database"
+	"github.com/Budi721/todolistskyshi/fondation/web"
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
-	"github.com/joho/godotenv"
 	"go.uber.org/automaxprocs/maxprocs"
 )
 
@@ -33,18 +33,13 @@ func run() error {
 	}
 	log.Printf("GOMAXPROCS [startup] %v", runtime.GOMAXPROCS(0))
 
-	// load environment variable
-	if err := godotenv.Load(); err != nil {
-		return err
-	}
-
-	// init database service
+	port, _ := strconv.Atoi(os.Getenv("MYSQL_PORT"))
 	db, err := database.Open(database.Config{
-		User:     "root",
-		Password: "root",
-		Host:     "localhost",
-		Name:     "todo4",
-		Port:     3306,
+		User:     os.Getenv("MYSQL_USER"),
+		Password: os.Getenv("MYSQL_PASSWORD"),
+		Host:     os.Getenv("MYSQL_HOST"),
+		Name:     os.Getenv("MYSQL_DBNAME"),
+		Port:     port,
 	})
 	if err != nil {
 		return fmt.Errorf("connecting to db: %w", err)

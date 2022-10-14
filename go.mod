@@ -5,7 +5,6 @@ go 1.19
 require (
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/gofiber/fiber/v2 v2.38.1
-	github.com/joho/godotenv v1.4.0
 	go.uber.org/automaxprocs v1.5.1
 	gorm.io/driver/mysql v1.4.1
 	gorm.io/gorm v1.24.0
