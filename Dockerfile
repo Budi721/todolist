@@ -9,4 +9,5 @@ RUN GOOS=linux go build -ldflags "-s -w" -o main .
 FROM alpine
 WORKDIR /app/go-server
 COPY --from=builder /app/go-server/main .
+EXPOSE 3030
 CMD ["./main"]

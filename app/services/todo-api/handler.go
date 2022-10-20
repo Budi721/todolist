@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Budi721/todolistskyshi/business/data/todo"
 	"github.com/Budi721/todolistskyshi/fondation/web"
+	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -14,10 +15,11 @@ import (
 type Handler struct {
 	repository todo.Repository
 	validate   *validator.Validate
+	trans      ut.Translator
 }
 
-func NewHandler(repository todo.Repository, validate *validator.Validate) *Handler {
-	return &Handler{repository: repository, validate: validate}
+func NewHandler(repository todo.Repository, validate *validator.Validate, trans ut.Translator) *Handler {
+	return &Handler{repository: repository, validate: validate, trans: trans}
 }
 
 func (h *Handler) GetTodosHandler(c *fiber.Ctx) error {
@@ -34,8 +36,8 @@ func (h *Handler) GetTodosHandler(c *fiber.Ctx) error {
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):
 			return c.Status(fiber.StatusNotFound).JSON(web.Response{
-				Status:  "Not found",
-				Message: "Not found",
+				Status:  "Not Found",
+				Message: "Not Found todos",
 				Data:    nil,
 			})
 		default:
@@ -55,15 +57,15 @@ func (h *Handler) GetTodosHandler(c *fiber.Ctx) error {
 }
 
 func (h *Handler) GetTodoHandler(c *fiber.Ctx) error {
-	id, err := strconv.Atoi(c.Params("id"))
+	id := c.Params("id")
 	result, err := h.repository.GetTodo(c.Context(), id)
 
 	if err != nil {
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):
 			return c.Status(fiber.StatusNotFound).JSON(web.Response{
-				Status:  "Not found",
-				Message: "Not found",
+				Status:  "Not Found",
+				Message: fmt.Sprintf("Todo with ID %v Not Found", id),
 				Data:    nil,
 			})
 		default:
@@ -85,10 +87,13 @@ func (h *Handler) PostTodoHandler(c *fiber.Ctx) error {
 	}
 
 	err := h.validate.Struct(payload)
+
 	if err != nil {
+		errs := err.(validator.ValidationErrors)
+
 		return c.Status(fiber.StatusBadRequest).JSON(web.Response{
-			Status:  "Bad request",
-			Message: "Bad request",
+			Status:  "Bad Request",
+			Message: errs[0].Translate(h.trans),
 			Data:    nil,
 		})
 	}
@@ -98,33 +103,28 @@ func (h *Handler) PostTodoHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(web.Response{
+	return c.Status(fiber.StatusCreated).JSON(web.Response{
 		Status:  "Success",
 		Message: "Success",
-		Data:    result,
+		Data:    result.Id,
 	})
 }
 
 func (h *Handler) PatchTodoHandler(c *fiber.Ctx) error {
-	id, err := strconv.Atoi(c.Params("id"))
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(web.Response{
-			Status:  "Bad request",
-			Message: "Bad request",
-			Data:    nil,
-		})
-	}
+	id := c.Params("id")
 
 	payload := new(todo.UpdateTodo)
 	if err := c.BodyParser(payload); err != nil {
 		return err
 	}
 
-	err = h.validate.Struct(payload)
+	err := h.validate.Struct(payload)
 	if err != nil {
+		errs := err.(validator.ValidationErrors)
+
 		return c.Status(fiber.StatusBadRequest).JSON(web.Response{
-			Status:  "Bad request",
-			Message: "Bad request",
+			Status:  "Bad Request",
+			Message: errs[0].Translate(h.trans),
 			Data:    nil,
 		})
 	}
@@ -134,8 +134,8 @@ func (h *Handler) PatchTodoHandler(c *fiber.Ctx) error {
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):
 			return c.Status(fiber.StatusNotFound).JSON(web.Response{
-				Status:  "Not found",
-				Message: "Not found",
+				Status:  "Not Found",
+				Message: fmt.Sprintf("Todo with ID %v Not Found", id),
 				Data:    nil,
 			})
 		default:
@@ -151,22 +151,15 @@ func (h *Handler) PatchTodoHandler(c *fiber.Ctx) error {
 }
 
 func (h *Handler) DeleteTodoHandler(c *fiber.Ctx) error {
-	id, err := strconv.Atoi(c.Params("id"))
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(web.Response{
-			Status:  "Bad request",
-			Message: "Bad request",
-			Data:    nil,
-		})
-	}
+	id := c.Params("id")
 
-	result, err := h.repository.DeleteTodo(c.Context(), id)
+	_, err := h.repository.DeleteTodo(c.Context(), id)
 	if err != nil {
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):
 			return c.Status(fiber.StatusNotFound).JSON(web.Response{
-				Status:  "Not found",
-				Message: "Not found",
+				Status:  "Not Found",
+				Message: fmt.Sprintf("Todo with ID %v Not Found", id),
 				Data:    nil,
 			})
 		default:
@@ -177,6 +170,6 @@ func (h *Handler) DeleteTodoHandler(c *fiber.Ctx) error {
 	return c.JSON(web.Response{
 		Status:  "Success",
 		Message: "Success",
-		Data:    result,
+		Data:    struct{}{},
 	})
 }

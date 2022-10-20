@@ -2,21 +2,24 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"os"
-	"os/signal"
-	"runtime"
-	"strconv"
-
 	"github.com/Budi721/todolistskyshi/app/services"
 	"github.com/Budi721/todolistskyshi/business/data"
 	"github.com/Budi721/todolistskyshi/business/data/activity"
 	"github.com/Budi721/todolistskyshi/business/data/todo"
 	"github.com/Budi721/todolistskyshi/business/sys/database"
 	"github.com/Budi721/todolistskyshi/fondation/web"
+	"github.com/go-playground/locales/en"
+	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/automaxprocs/maxprocs"
+	"log"
+	"os"
+	"os/signal"
+	"regexp"
+	"runtime"
+	"strconv"
+	"strings"
 )
 
 func main() {
@@ -41,6 +44,7 @@ func run() error {
 		Name:     os.Getenv("MYSQL_DBNAME"),
 		Port:     port,
 	})
+
 	if err != nil {
 		return fmt.Errorf("connecting to db: %w", err)
 	}
@@ -61,7 +65,22 @@ func run() error {
 	})
 	factory := data.NewFactory(db)
 	validate := validator.New()
-	services.NewAppRouter(app, factory, validate)
+	en := en.New()
+	uni := ut.New(en, en)
+
+	// this is usually know or extracted from http 'Accept-Language' header
+	// also see uni.FindTranslator(...)
+	trans, _ := uni.GetTranslator("en")
+	err = validate.RegisterTranslation("required", trans, func(ut ut.Translator) error {
+		return ut.Add("required", "{0} cannot be null", true)
+	}, func(ut ut.Translator, fe validator.FieldError) string {
+		t, _ := ut.T("required", fe.Field())
+		return ToSnakeCase(t)
+	})
+	if err != nil {
+		return err
+	}
+	services.NewAppRouter(app, factory, validate, trans)
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
@@ -70,9 +89,18 @@ func run() error {
 		_ = app.Shutdown()
 	}()
 
-	if err := app.Listen(":3000"); err != nil {
+	if err := app.Listen(":3030"); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func ToSnakeCase(str string) string {
+	var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
+	var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
+
+	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+	return strings.ToLower(snake)
 }

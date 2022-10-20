@@ -2,8 +2,10 @@ package activity_api
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Budi721/todolistskyshi/business/data/activity"
 	"github.com/Budi721/todolistskyshi/fondation/web"
+	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -13,10 +15,11 @@ import (
 type Handler struct {
 	repository activity.Repository
 	validate   *validator.Validate
+	trans      ut.Translator
 }
 
-func NewHandler(repository activity.Repository, validate *validator.Validate) *Handler {
-	return &Handler{repository: repository, validate: validate}
+func NewHandler(repository activity.Repository, validate *validator.Validate, trans ut.Translator) *Handler {
+	return &Handler{repository: repository, validate: validate, trans: trans}
 }
 
 func (h *Handler) GetActivitiesHandler(c *fiber.Ctx) error {
@@ -26,8 +29,8 @@ func (h *Handler) GetActivitiesHandler(c *fiber.Ctx) error {
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):
 			return c.Status(fiber.StatusNotFound).JSON(web.Response{
-				Status:  "Not found",
-				Message: "Not found",
+				Status:  "Not Found",
+				Message: "Not Found activities",
 				Data:    nil,
 			})
 		default:
@@ -54,8 +57,8 @@ func (h *Handler) GetActivityHandler(c *fiber.Ctx) error {
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):
 			return c.Status(fiber.StatusNotFound).JSON(web.Response{
-				Status:  "Not found",
-				Message: "Not found",
+				Status:  "Not Found",
+				Message: fmt.Sprintf("Activity with ID %v Not Found", id),
 				Data:    nil,
 			})
 		default:
@@ -78,9 +81,11 @@ func (h *Handler) PostActivityHandler(c *fiber.Ctx) error {
 
 	err := h.validate.Struct(payload)
 	if err != nil {
+		errs := err.(validator.ValidationErrors)
+
 		return c.Status(fiber.StatusBadRequest).JSON(web.Response{
-			Status:  "Bad request",
-			Message: "Bad request",
+			Status:  "Bad Request",
+			Message: errs[0].Translate(h.trans),
 			Data:    nil,
 		})
 	}
@@ -90,7 +95,7 @@ func (h *Handler) PostActivityHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(web.Response{
+	return c.Status(fiber.StatusCreated).JSON(web.Response{
 		Status:  "Success",
 		Message: "Success",
 		Data:    result,
@@ -101,8 +106,8 @@ func (h *Handler) PatchActivityHandler(c *fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(web.Response{
-			Status:  "Bad request",
-			Message: "Bad request",
+			Status:  "Bad Request",
+			Message: "cannot parse id",
 			Data:    nil,
 		})
 	}
@@ -114,9 +119,11 @@ func (h *Handler) PatchActivityHandler(c *fiber.Ctx) error {
 
 	err = h.validate.Struct(payload)
 	if err != nil {
+		errs := err.(validator.ValidationErrors)
+
 		return c.Status(fiber.StatusBadRequest).JSON(web.Response{
-			Status:  "Bad request",
-			Message: "Bad request",
+			Status:  "Bad Request",
+			Message: errs[0].Translate(h.trans),
 			Data:    nil,
 		})
 	}
@@ -126,8 +133,8 @@ func (h *Handler) PatchActivityHandler(c *fiber.Ctx) error {
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):
 			return c.Status(fiber.StatusNotFound).JSON(web.Response{
-				Status:  "Not found",
-				Message: "Not found",
+				Status:  "Not Found",
+				Message: fmt.Sprintf("Activity with ID %v Not Found", id),
 				Data:    nil,
 			})
 		default:
@@ -146,19 +153,19 @@ func (h *Handler) DeleteActivityHandler(c *fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(web.Response{
-			Status:  "Bad request",
-			Message: "Bad request",
+			Status:  "Bad Request",
+			Message: "Bad Request",
 			Data:    nil,
 		})
 	}
 
-	result, err := h.repository.DeleteActivity(c.Context(), id)
+	_, err = h.repository.DeleteActivity(c.Context(), id)
 	if err != nil {
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):
 			return c.Status(fiber.StatusNotFound).JSON(web.Response{
-				Status:  "Not found",
-				Message: "Not found",
+				Status:  "Not Found",
+				Message: fmt.Sprintf("Activity with ID %v Not Found", id),
 				Data:    nil,
 			})
 		default:
@@ -169,6 +176,6 @@ func (h *Handler) DeleteActivityHandler(c *fiber.Ctx) error {
 	return c.JSON(web.Response{
 		Status:  "Success",
 		Message: "Success",
-		Data:    result,
+		Data:    struct{}{},
 	})
 }

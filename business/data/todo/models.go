@@ -1,12 +1,13 @@
 package todo
 
 import (
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"time"
 )
 
 type Todo struct {
-	Id              int            `gorm:"primaryKey" json:"id"`
+	Id              uuid.UUID      `gorm:"primaryKey" gorm:"type:uuid"`
 	ActivityGroupId int            `json:"activity_group_id"`
 	Title           string         `json:"title"`
 	IsActive        string         `json:"is_active"  gorm:"default:1"`
@@ -14,6 +15,11 @@ type Todo struct {
 	CreatedAt       time.Time      `json:"created_at"`
 	UpdatedAt       time.Time      `json:"updated_at"`
 	DeletedAt       gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+}
+
+func (t *Todo) BeforeCreate(tx *gorm.DB) (err error) {
+	t.Id = uuid.New()
+	return
 }
 
 type QueryFilter struct {

@@ -7,7 +7,7 @@ import (
 )
 
 type Activity struct {
-	Id        int            `gorm:"primaryKey" json:"id"`
+	Id        int            `gorm:"primaryKey" gorm:"column:activity_group_id" json:"id"`
 	Email     string         `json:"email"`
 	Title     string         `json:"title"`
 	CreatedAt time.Time      `json:"created_at"`

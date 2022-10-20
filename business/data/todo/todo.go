@@ -8,10 +8,10 @@ import (
 
 type Repository interface {
 	GetTodos(ctx context.Context, filter QueryFilter) ([]Todo, error)
-	GetTodo(ctx context.Context, id int) (*Todo, error)
+	GetTodo(ctx context.Context, id string) (*Todo, error)
 	CreateTodo(ctx context.Context, todo *NewTodo) (*Todo, error)
-	UpdateTodo(ctx context.Context, id int, todo *UpdateTodo) (*Todo, error)
-	DeleteTodo(ctx context.Context, id int) (int, error)
+	UpdateTodo(ctx context.Context, id string, todo *UpdateTodo) (*Todo, error)
+	DeleteTodo(ctx context.Context, id string) (string, error)
 }
 
 type repository struct {
@@ -37,7 +37,7 @@ func (r *repository) GetTodos(ctx context.Context, filter QueryFilter) ([]Todo, 
 	return todos, nil
 }
 
-func (r *repository) GetTodo(ctx context.Context, id int) (*Todo, error) {
+func (r *repository) GetTodo(ctx context.Context, id string) (*Todo, error) {
 	var todo Todo
 
 	if err := r.db.WithContext(ctx).First(&todo, id).Error; err != nil {
@@ -60,7 +60,7 @@ func (r *repository) CreateTodo(ctx context.Context, newTodo *NewTodo) (*Todo, e
 	return &todo, nil
 }
 
-func (r *repository) UpdateTodo(ctx context.Context, id int, updateTodo *UpdateTodo) (*Todo, error) {
+func (r *repository) UpdateTodo(ctx context.Context, id string, updateTodo *UpdateTodo) (*Todo, error) {
 	todo := Todo{}
 	if err := r.db.WithContext(ctx).First(&todo, id).Error; err != nil {
 		return nil, err
@@ -76,18 +76,18 @@ func (r *repository) UpdateTodo(ctx context.Context, id int, updateTodo *UpdateT
 	return &todo, nil
 }
 
-func (r *repository) DeleteTodo(ctx context.Context, id int) (int, error) {
+func (r *repository) DeleteTodo(ctx context.Context, id string) (string, error) {
 	todo := Todo{}
 
 	if err := r.db.WithContext(ctx).First(&todo, id).Error; err != nil {
-		return -1, err
+		return "", err
 	}
 
 	if err := r.db.WithContext(ctx).Delete(&todo, id).Error; err != nil {
-		return -1, err
+		return "", err
 	}
 
-	return todo.Id, nil
+	return todo.Id.String(), nil
 }
 
 func NewRepository(db *gorm.DB) Repository {
